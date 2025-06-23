@@ -14,7 +14,6 @@ class Stitcher:
         pass
 
     def detectAndDescribe(self, image):
-
         # detect and extract features from the image
         descriptor = cv2.SIFT_create()
         kps, features = descriptor.detectAndCompute(image, None)

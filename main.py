@@ -5,6 +5,7 @@ Create panoramas from a set of images.
 
 import argparse
 import logging
+import re
 import time
 from pathlib import Path
 
@@ -20,6 +21,8 @@ from src.matching import (
 )
 from src.rendering import multi_band_blending, set_gain_compensations, simple_blending
 
+start_time = time.time()
+
 parser = argparse.ArgumentParser(
     description="Create panoramas from a set of images. \
                  All the images must be in the same directory. \
@@ -30,6 +33,7 @@ parser.add_argument(dest="data_dir", type=Path, help="directory containing the i
 parser.add_argument(
     "-mbb",
     "--multi-band-blending",
+    default=False,
     action="store_true",
     help="use multi-band blending instead of simple blending",
 )
@@ -56,8 +60,15 @@ parser.add_argument(
 
 args = vars(parser.parse_args())
 
-if args["verbose"]:
-    logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,  # 根据 -v 参数设置日志级别
+    format="%(asctime)s - %(levelname)s - %(message)s",  # 日志格式：时间 - 日志级别 - 消息
+    datefmt="%Y-%m-%d %H:%M:%S",  # 日期格式
+    handlers=[
+        logging.StreamHandler(),  # 输出到控制台
+        logging.FileHandler("panorama_creation.log", mode="w", encoding="utf-8"),  # 输出到文件
+    ],
+)
 
 logging.info("Gathering images...")
 
@@ -68,6 +79,10 @@ image_paths = [
     for filepath in args["data_dir"].iterdir()
     if filepath.suffix.lower() in valid_images_extensions
 ]
+
+# image_paths = sorted(image_paths, key=lambda x: int(re.search(r'\d+', x).group()))
+image_paths = sorted(image_paths)
+print(image_paths)
 
 images = [Image(path, args.get("size")) for path in image_paths]
 
@@ -84,7 +99,7 @@ pair_matches: list[PairMatch] = matcher.get_pair_matches()
 pair_matches.sort(key=lambda pair_match: len(pair_match.matches), reverse=True)
 
 logging.info("Finding connected components...")
-
+logging.info("Total pair matches received: %d", len(pair_matches))
 connected_components = find_connected_components(pair_matches)
 
 logging.info("Found %d connected components", len(connected_components))
@@ -135,9 +150,18 @@ else:
         simple_blending(connected_component)
         for connected_component in connected_components
     ]
-
-logging.info("Saving results to %s", args["data_dir"] / "results")
+if len(results) > 0:
+    logging.info("Saving results to %s", args["data_dir"] / "results")
+else:
+    logging.info("No results to save")
 
 (args["data_dir"] / "results").mkdir(exist_ok=True, parents=True)
+
 for i, result in enumerate(results):
     cv2.imwrite(str(args["data_dir"] / "results" / f"pano_{i}.jpg"), result)
+
+end_time = time.time()
+
+# 计算函数运行的时间
+elapsed_time = end_time - start_time
+print(f"total cost: {elapsed_time:.2f} 秒")

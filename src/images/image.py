@@ -1,3 +1,4 @@
+from __future__ import annotations
 import cv2
 import numpy as np
 
@@ -21,15 +22,16 @@ class Image:
                 else:
                     self.image = cv2.resize(self.image, (int(w * size / h), size))
 
-        self.keypoints = None
         self.features = None
+        self.keypoints = None
         self.H: np.ndarray = np.eye(3)
         self.component_id: int = 0
         self.gain: np.ndarray = np.ones(3, dtype=np.float32)
 
     def compute_features(self) -> None:
         """Compute the features and the keypoints of the image using SIFT."""
-        descriptor = cv2.SIFT_create()
-        keypoints, features = descriptor.detectAndCompute(self.image, None)
-        self.keypoints = keypoints
-        self.features = features
+        # image = numpy_image_to_torch(self.image).to(getDevice())
+        # self.features = getExtractor().extract(image)
+        from .model import getFeatures
+        self.features = getFeatures(self)
+        pass

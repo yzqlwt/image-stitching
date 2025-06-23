@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import cv2
 import numpy as np
 
@@ -36,12 +38,19 @@ class PairMatch:
             ransac_reproj_thresh: reprojection threshold used in the RANSAC algorithm
             ransac_max_iter: number of maximum iterations for the RANSAC algorithm
         """
-        self.matchpoints_a = np.float32(
-            [self.image_a.keypoints[match.queryIdx].pt for match in self.matches]
-        )
-        self.matchpoints_b = np.float32(
-            [self.image_b.keypoints[match.trainIdx].pt for match in self.matches]
-        )
+        # self.matchpoints_a = np.float32(
+        #     [self.image_a.keypoints[match.queryIdx].pt for match in self.matches]
+        # )
+        # self.matchpoints_b = np.float32(
+        #     [self.image_b.keypoints[match.trainIdx].pt for match in self.matches]
+        # )
+
+        kpts0, kpts1, matches = self.image_a.keypoints, self.image_b.keypoints, self.matches
+
+        m_kpts0, m_kpts1 = kpts0[matches[..., 0]], kpts1[matches[..., 1]]
+
+        self.matchpoints_a = m_kpts0.cpu().numpy()
+        self.matchpoints_b = m_kpts1.cpu().numpy()
 
         self.H, self.status = cv2.findHomography(
             self.matchpoints_b,
